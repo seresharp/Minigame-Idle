@@ -21,7 +21,7 @@ namespace MinigameIdle.Tetris
             GenericUpgradeButtons = new Button[5];
             for (int i = 0; i < GenericUpgradeButtons.Length; i++)
             {
-                GenericUpgradeButtons[i] = new(Game.MainGame, new(), Color.DimGray, "This is a bug!");
+                GenericUpgradeButtons[i] = new(Game.MainGame, new(), Color.DimGray, string.Empty);
             }
         }
 
@@ -59,6 +59,40 @@ namespace MinigameIdle.Tetris
         public void Update()
         {
             // Decide which upgrades to place on generic buttons
+            List<(string name, double cost, Action callback)> genUpgrades = new();
+            if (!Game.BoughtUpgrades.BasicControls)
+            {
+                genUpgrades.Add(("Basic Controls", 0.5, () => Game.BoughtUpgrades.BasicControls = true));
+            }
+            else
+            {
+                if (!Game.BoughtUpgrades.AIUnlocked)
+                {
+                    genUpgrades.Add(("Random 'AI'", 10, () => Game.BoughtUpgrades.AIUnlocked = true));
+                }
+                else if (!Game.BoughtUpgrades.StupidAI)
+                {
+                    genUpgrades.Add(("Beginner AI", 50, () => Game.BoughtUpgrades.StupidAI = true));
+                }
+                else if (!Game.BoughtUpgrades.AdvancedAI)
+                {
+                    genUpgrades.Add(("Advanced AI", 1000, () => Game.BoughtUpgrades.AdvancedAI = true));
+                }
+
+                if (!Game.BoughtUpgrades.Teleport)
+                {
+                    genUpgrades.Add(("Teleport", 100, () => Game.BoughtUpgrades.Teleport = true));
+                }
+                else if (!Game.BoughtUpgrades.AITeleport && Game.BoughtUpgrades.AIUnlocked)
+                {
+                    genUpgrades.Add(("AI Teleport", 25000, () => Game.BoughtUpgrades.AITeleport = true));
+                }
+
+                if (!Game.BoughtUpgrades.BagRNG)
+                {
+                    genUpgrades.Add(("Consistent RNG", 10000, () => Game.BoughtUpgrades.BagRNG = true));
+                }
+            }
 
             // Button input
             if (SpeedButton.WasClicked() && Game.BoughtUpgrades.TickUpgrades < 100
@@ -75,6 +109,16 @@ namespace MinigameIdle.Tetris
                 Game.BoughtUpgrades.AutoStartUpgrades++;
             }
 
+            // Generic button input
+            for (int i = 0; i < genUpgrades.Count; i++)
+            {
+                if (GenericUpgradeButtons[i].WasClicked() && Game.MainGame.Points >= genUpgrades[i].cost)
+                {
+                    Game.MainGame.Points -= genUpgrades[i].cost;
+                    genUpgrades[i].callback();
+                }
+            }
+
             // Button text
             if (Game.BoughtUpgrades.TickUpgrades == 100)
             {
@@ -85,8 +129,6 @@ namespace MinigameIdle.Tetris
                 int up = Game.BoughtUpgrades.TickUpgrades;
                 SpeedButton.UpdateText($"Speed Upgrade ({up}/100){$"\n{GetSpeedCost(up):0.##} Points"}");
             }
-
-            SpeedButton.UpdateText($"Speed Upgrade ({Game.BoughtUpgrades.TickUpgrades}/100){(Game.BoughtUpgrades.TickUpgrades >= 100 ? "" : $"\n{GetSpeedCost(Game.BoughtUpgrades.TickUpgrades):0.##} Points")}");
 
             if (Game.BoughtUpgrades.AutoStartUpgrades == 0)
             {
@@ -101,15 +143,31 @@ namespace MinigameIdle.Tetris
                 int up = Game.BoughtUpgrades.AutoStartUpgrades;
                 AutostartButton.UpdateText($"Autostart Upgrade ({up - 1}/10){$"\n{GetAutostartCost(up):0.##} Points"}");
             }
+
+            // Generic button text
+            for (int i = 0; i < GenericUpgradeButtons.Length; i++)
+            {
+                if (i >= genUpgrades.Count)
+                {
+                    GenericUpgradeButtons[i].UpdateText(string.Empty);
+                    continue;
+                }
+
+                GenericUpgradeButtons[i].UpdateText($"{genUpgrades[i].name}\n{genUpgrades[i].cost} Points");
+            }
         }
 
         public void Draw()
         {
             SpeedButton.Draw();
             AutostartButton.Draw();
+
             foreach (Button b in GenericUpgradeButtons)
             {
-                b.Draw();
+                if (b.Text != string.Empty)
+                {
+                    b.Draw();
+                }
             }
         }
 
