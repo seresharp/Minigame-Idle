@@ -1,4 +1,6 @@
-﻿namespace MinigameIdle.Tetris
+﻿using Microsoft.Xna.Framework;
+
+namespace MinigameIdle.Tetris
 {
     public class TetrisGrid
     {
@@ -24,7 +26,7 @@
         public void DrawBackground()
         {
             // Background
-            Game.MainGame.Graphics.DrawRectangle(ScreenPos, Color.FromArgb(1, 50, 32));
+            Game.MainGame.SpriteBatch.DrawRectangle(ScreenPos, new Color(1, 50, 32));
 
             // "Game Over" area
             for (int x = 0; x < Width; x++)
@@ -41,27 +43,27 @@
             // Vertical lines
             for (int x = 0; x <= Width; x++)
             {
-                int lineX = (int)(ScreenPos.X + x * (ScreenPos.Width / (float)Width));
-                Game.MainGame.Graphics.DrawLine(lineX, ScreenPos.Top, lineX, ScreenPos.Bottom, Color.Black);
+                int lineX = (int)(ScreenPos.X + (x * (ScreenPos.Width / (float)Width)));
+                Game.MainGame.SpriteBatch.DrawLine(new(lineX, ScreenPos.Top), new(lineX, ScreenPos.Bottom), Color.Black);
             }
 
             // Horizontal lines
             for (int y = 0; y <= Height; y++)
             {
-                int lineY = (int)(ScreenPos.Y + y * (ScreenPos.Height / (float)Height));
-                Game.MainGame.Graphics.DrawLine(ScreenPos.Left, lineY, ScreenPos.Right, lineY, Color.Black);
+                int lineY = (int)(ScreenPos.Y + (y * (ScreenPos.Height / (float)Height)));
+                Game.MainGame.SpriteBatch.DrawLine(new(ScreenPos.Left, lineY), new(ScreenPos.Right, lineY), Color.Black);
             }
         }
 
         public void ColorSquare(int x, int y, Color color)
         {
-            int x1 = (int)(ScreenPos.X + x * (ScreenPos.Width / (float)Width));
-            int x2 = (int)(ScreenPos.X + (x + 1) * (ScreenPos.Width / (float)Width));
+            int x1 = (int)(ScreenPos.X + (x * (ScreenPos.Width / (float)Width)));
+            int x2 = (int)(ScreenPos.X + ((x + 1) * (ScreenPos.Width / (float)Width)));
 
-            int y1 = (int)(ScreenPos.Y + y * (ScreenPos.Height / (float)Height));
-            int y2 = (int)(ScreenPos.Y + (y + 1) * (ScreenPos.Height / (float)Height));
+            int y1 = (int)(ScreenPos.Y + (y * (ScreenPos.Height / (float)Height)));
+            int y2 = (int)(ScreenPos.Y + ((y + 1) * (ScreenPos.Height / (float)Height)));
 
-            Game.MainGame.Graphics.DrawRectangle(x1, y1, x2 - x1, y2 - y1, color);
+            Game.MainGame.SpriteBatch.DrawRectangle(new(x1, y1, x2 - x1, y2 - y1), color);
         }
     }
 }

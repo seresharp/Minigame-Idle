@@ -1,4 +1,5 @@
-﻿using Button = MinigameIdle.Engine.Button;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
 namespace MinigameIdle.Tetris
 {
@@ -20,6 +21,8 @@ namespace MinigameIdle.Tetris
 
         private Button StartGameButton = null!;
         private Button EndGameButton = null!;
+        private Button AIButton = null!;
+        private TetrisUpgradePanel UpgradeButtons = null!;
 
         private bool _gameRunning;
         public bool GameRunning
@@ -59,9 +62,12 @@ namespace MinigameIdle.Tetris
         public override void Initialize()
         {
             Grid = new(this, new Rectangle(), 10, 20);
-            StartGameButton = new(MainGame, new Rectangle(), Color.DimGray, "Begin Game\n(inf)");
-            EndGameButton = new(MainGame, new Rectangle(), Color.DimGray, "End Early For\n0 Points");
             DeadTetrominos = new Color?[Grid.Width, Grid.Height];
+
+            StartGameButton = new(MainGame, new Rectangle(), Color.DimGray, "Begin Game\n(inf)");
+            EndGameButton = new(MainGame, new Rectangle(), Color.DimGray, "End Early\n+0 Points");
+            AIButton = new(MainGame, new Rectangle(), Color.DimGray, "AI Enabled: false\n(Must be unlocked)");
+            UpgradeButtons = new(this);
         }
 
         public void Resize()
@@ -83,9 +89,17 @@ namespace MinigameIdle.Tetris
                 MainGame.ScaleY(25),
                 MainGame.ScaleX(115),
                 MainGame.ScaleY(80)));
+
+            AIButton.Resize(new Rectangle(
+                MainGame.ScaleX(690),
+                MainGame.ScaleY(120),
+                MainGame.ScaleX(245),
+                MainGame.ScaleY(80)));
+
+            UpgradeButtons.Resize();
         }
 
-        public override void Update()
+        public override void Update(GameTime gameTime)
         {
             // Button input
             if (StartGameButton.WasClicked())
@@ -99,14 +113,22 @@ namespace MinigameIdle.Tetris
                 CurrentTetromino = null;
             }
 
+            if (AIButton.WasClicked() && BoughtUpgrades.AIUnlocked)
+            {
+                BoughtUpgrades.AIEnabled = !BoughtUpgrades.AIEnabled;
+            }
+
+            // Upgrades panel button handling
+            UpgradeButtons.Update();
+
             // Autostart
             if (GameRunning)
             {
                 _startTimer = 0;
             }
-            else if (BoughtUpgrades.AutoStart)
+            else if (BoughtUpgrades.AutoStartUpgrades > 0)
             {
-                _startTimer += MainGame.DeltaTime;
+                _startTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (_startTimer >= Upgrades.AUTOSTART_TIME - BoughtUpgrades.AutoStartUpgrades)
                 {
                     GameRunning = true;
@@ -114,7 +136,7 @@ namespace MinigameIdle.Tetris
             }
 
             // Button text
-            if (!BoughtUpgrades.AutoStart)
+            if (BoughtUpgrades.AutoStartUpgrades == 0)
             {
                 StartGameButton.UpdateText("Begin Game\n(inf)");
             }
@@ -123,28 +145,30 @@ namespace MinigameIdle.Tetris
                 StartGameButton.UpdateText($"Begin Game\n({(GameRunning ? 0 : (Upgrades.AUTOSTART_TIME - BoughtUpgrades.AutoStartUpgrades - _startTimer).ToString("0.0"))})");
             }
 
-            EndGameButton.UpdateText($"End Early For\n{(GameRunning ? GetGridPoints().ToString("0.##") : 0)} Points");
+            EndGameButton.UpdateText($"End Early\n+{(GameRunning ? GetGridPoints().ToString("0.##") : 0)} Points");
+
+            AIButton.UpdateText($"AI Enabled: {BoughtUpgrades.AIEnabled}{(BoughtUpgrades.AIUnlocked ? "" : "\n(Must be unlocked)")}");
 
             // Game input handling
             if (MainGame.ActiveGame == this && GameRunning
                 && !BoughtUpgrades.AIEnabled && CurrentTetromino is { Alive: true })
             {
-                if (BoughtUpgrades.Left && MainGame.Keyboard.WasPressed(Keys.Left))
+                if (BoughtUpgrades.BasicControls && MainGame.Input.WasPressed(Keys.Left))
                 {
                     CurrentTetromino.TryMove(new Point(-1, 0));
                 }
 
-                if (BoughtUpgrades.Right && MainGame.Keyboard.WasPressed(Keys.Right))
+                if (BoughtUpgrades.BasicControls && MainGame.Input.WasPressed(Keys.Right))
                 {
                     CurrentTetromino.TryMove(new Point(1, 0));
                 }
 
-                if (BoughtUpgrades.Rotate && MainGame.Keyboard.WasPressed(Keys.Up))
+                if (BoughtUpgrades.BasicControls && MainGame.Input.WasPressed(Keys.Up))
                 {
                     CurrentTetromino.Rotate();
                 }
 
-                if (BoughtUpgrades.Teleport && MainGame.Keyboard.WasPressed(Keys.Down))
+                if (BoughtUpgrades.Teleport && MainGame.Input.WasPressed(Keys.Down))
                 {
                     while (CurrentTetromino.Alive)
                     {
@@ -154,7 +178,7 @@ namespace MinigameIdle.Tetris
             }
 
             // Move tetrominos
-            _tickTimer += MainGame.DeltaTime;
+            _tickTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             while (_tickTimer >= TickRate)
             {
                 _tickTimer -= TickRate;
@@ -270,6 +294,8 @@ namespace MinigameIdle.Tetris
             // UI
             StartGameButton.Draw();
             EndGameButton.Draw();
+            AIButton.Draw();
+            UpgradeButtons.Draw();
         }
 
         private readonly List<int> TetBag = new();
@@ -337,9 +363,7 @@ namespace MinigameIdle.Tetris
         public class Upgrades
         {
             // Basic game functionality
-            public bool Left;
-            public bool Right;
-            public bool Rotate;
+            public bool BasicControls;
             public bool Teleport;
 
             // AI Upgrades
@@ -350,9 +374,8 @@ namespace MinigameIdle.Tetris
             public bool AITeleport;
 
             // Autostart
-            public const int AUTOSTART_TIME = 10;
-            public bool AutoStart;
-            public int AutoStartUpgrades; // Max 10
+            public const int AUTOSTART_TIME = 11;
+            public int AutoStartUpgrades; // Max 11
 
             // Tickrate
             public int TickUpgrades; // Max 100

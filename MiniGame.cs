@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.Xna.Framework;
 
 namespace MinigameIdle
 {
@@ -10,7 +6,7 @@ namespace MinigameIdle
     {
         public abstract void Initialize();
 
-        public abstract void Update();
+        public abstract void Update(GameTime gameTime);
 
         public abstract void Draw();
     }

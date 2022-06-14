@@ -1,4 +1,6 @@
-﻿namespace MinigameIdle.Tetris
+﻿using Microsoft.Xna.Framework;
+
+namespace MinigameIdle.Tetris
 {
     public class Tetromino
     {
@@ -241,7 +243,7 @@
                     }
 
                     // Final score
-                    double score = .760666 * lines - .510066 * heightSum - .35663 * holes - .184483 * bumpiness;
+                    double score = (.760666 * lines) - (.510066 * heightSum) - (.35663 * holes) - (.184483 * bumpiness);
                     if (score > maxScore)
                     {
                         maxScore = score;

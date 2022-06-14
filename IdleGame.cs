@@ -1,7 +1,6 @@
-﻿using MinigameIdle.Engine;
-using MinigameIdle.Engine.Mathematics;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using MinigameIdle.Tetris;
-using Button = MinigameIdle.Engine.Button;
 
 namespace MinigameIdle
 {
@@ -17,27 +16,47 @@ namespace MinigameIdle
         public TetrisGame Tetris { get; init; }
         private Button TetrisButton = null!;
 
+        public InputManager Input { get; init; } = new();
+
+        public GraphicsDeviceManager Graphics { get; init; }
+
+        public SpriteBatch SpriteBatch { get; private set; } = null!;
+
+        public SpriteFont Font { get; private set; } = null!;
+
         public IdleGame()
         {
+            Graphics = new(this);
+
             Tetris = new TetrisGame(this);
             ActiveGame = Tetris;
         }
 
-        public override void Initialize()
+        protected override void Initialize()
         {
-            Resolution = new Vector2(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-            Graphics.BackColor = Color.DarkSlateGray;
+            Graphics.PreferredBackBufferWidth = DEFAULT_WIDTH;
+            Graphics.PreferredBackBufferHeight = DEFAULT_HEIGHT;
+            Graphics.ApplyChanges();
+
+            IsMouseVisible = true;
 
             Tetris.Initialize();
             TetrisButton = new(this, new(), Color.DimGray, "Falling Blocks");
+
+            SpriteBatch = new(GraphicsDevice);
+            SpriteBatch.InitPixel();
+
+            Font = Content.Load<SpriteFont>("Content/Arial");
 
             // Ensure everything matches the default resolution
             ResizeAll();
         }
 
-        public override void Update()
+        protected override void Update(GameTime gameTime)
         {
-            Tetris.Update();
+            Input.Update();
+
+            Tetris.Update(gameTime);
 
             if (TetrisButton.WasClicked())
             {
@@ -45,24 +64,31 @@ namespace MinigameIdle
             }
         }
 
-        public override void Draw()
+        protected override void Draw(GameTime gameTime)
         {
+            GraphicsDevice.Clear(Color.DarkSlateGray);
+            SpriteBatch.Begin();
+
             // Tetris
             Tetris.Draw();
 
             // Sidebar
-            Graphics.DrawRectangle(0, 0, ScaleX(200), ScaleY(910), Color.FromArgb(56, 56, 56));
-            Graphics.DrawRectangle(0, 0, ScaleX(200), ScaleY(100), Color.ForestGreen);
-            Graphics.DrawText($"Points\n{Points.ToString(Points >= 1000000 ? "0.000E0" : "0.0")}", Button.DefaultFont, Color.Black, new Vector2(0, 0), new Vector2(ScaleX(200), ScaleY(100)));
+            SpriteBatch.DrawRectangle(new(0, 0, ScaleX(200), ScaleY(910)), new Color(56, 56, 56));
+            SpriteBatch.DrawRectangle(new(0, 0, ScaleX(200), ScaleY(100)), Color.ForestGreen);
+            SpriteBatch.DrawText($"Points\n{Points.ToString(Points >= 1000000 ? "0.000E0" : "0.00")}", Font, Color.Black, new Vector2(0, 0), new Vector2(ScaleX(200), ScaleY(100)));
 
             TetrisButton.Draw();
+
+            //Graphics.DrawText((1/DeltaTime).ToString("00"), Button.DefaultFont, Color.Red, new(0, 800), new(200, 100));
+
+            SpriteBatch.End();
         }
 
         public int ScaleX(int x)
-            => (int)((float)x / DEFAULT_WIDTH * Resolution.X);
+            => (int)((float)x / DEFAULT_WIDTH * Graphics.PreferredBackBufferWidth);
 
         public int ScaleY(int y)
-            => (int)((float)y / DEFAULT_HEIGHT * Resolution.Y);
+            => (int)((float)y / DEFAULT_HEIGHT * Graphics.PreferredBackBufferHeight);
 
         private void ResizeAll()
         {

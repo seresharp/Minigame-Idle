@@ -1,56 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Windows.Forms;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
-namespace MinigameIdle.Engine
+namespace MinigameIdle
 {
-    public struct KeyState
-    {
-        public KeyState(Keys key, bool isPressed, bool wasPressed)
-        {
-            Key = key;
-            IsPressed = isPressed;
-            WasPressed = wasPressed;
-        }
-
-        public bool IsPressed { get; init; }
-
-        public bool WasPressed { get; init; }
-
-        public Keys Key { get; init; }
-    }
-
-    public class KeyboardManager : IDisposable
+    public class InputManager
     {
         // Caching this should improve performance a bit
         private static readonly Keys[] AllKeys = (Keys[])Enum.GetValues(typeof(Keys));
 
-        private readonly Game game;
-
-        private readonly Dictionary<Keys, bool> asyncKeys;
         private readonly Dictionary<Keys, bool> oldKeys;
         private readonly Dictionary<Keys, bool> currentKeys;
 
-        internal KeyboardManager(Game game)
-        {
-            this.game = game;
+        private MouseState _oldMouse;
+        private MouseState _currentMouse;
 
+        public InputManager()
+        {
             // Fill all dictionaries with false
-            asyncKeys = new Dictionary<Keys, bool>();
+            oldKeys = new Dictionary<Keys, bool>();
             foreach (Keys key in AllKeys)
             {
                 // This check is required because the Keys enum contains duplicate values (ex. return/enter are both 13)
-                if (!asyncKeys.ContainsKey(key))
+                if (!oldKeys.ContainsKey(key))
                 {
-                    asyncKeys.Add(key, false);
+                    oldKeys.Add(key, false);
                 }
             }
 
-            oldKeys = new Dictionary<Keys, bool>(asyncKeys);
-            currentKeys = new Dictionary<Keys, bool>(asyncKeys);
-
-            // Begin looking for input
-            HookForm();
+            currentKeys = new Dictionary<Keys, bool>(oldKeys);
         }
 
         public KeyState this[Keys key] => new(key, IsPressed(key), WasPressed(key));
@@ -128,38 +105,88 @@ namespace MinigameIdle.Engine
             return o;
         }
 
-        void IDisposable.Dispose()
-        {
-            UnhookForm();
-            GC.SuppressFinalize(this);
-        }
+        public MouseState GetMouseState()
+            => new(
+                _currentMouse.X,
+                _currentMouse.Y,
+                new(_currentMouse.Left.IsClicked, _currentMouse.Left.IsClicked && !_oldMouse.Left.IsClicked),
+                new(_currentMouse.Right.IsClicked, _currentMouse.Right.IsClicked && !_oldMouse.Right.IsClicked),
+                new(_currentMouse.Center.IsClicked, _currentMouse.Center.IsClicked && !_oldMouse.Center.IsClicked));
 
-        internal void Update()
+        public void Update()
         {
             foreach (Keys key in AllKeys)
             {
                 oldKeys[key] = currentKeys[key];
-                currentKeys[key] = asyncKeys[key];
+                currentKeys[key] = Keyboard.GetState().IsKeyDown(key);
             }
-        }
 
-        private void HookForm()
+            _oldMouse = _currentMouse;
+            _currentMouse = new(
+                Mouse.GetState().X,
+                Mouse.GetState().Y,
+                new(Mouse.GetState().LeftButton == ButtonState.Pressed),
+                new(Mouse.GetState().RightButton == ButtonState.Pressed),
+                new(Mouse.GetState().MiddleButton == ButtonState.Pressed));
+        }
+    }
+
+    public struct KeyState
+    {
+        public KeyState(Keys key, bool isPressed, bool wasPressed)
         {
-            // Prevent duplicate hooks
-            UnhookForm();
-
-            game.Platform.Form.KeyDown += RegisterKeyDown;
-            game.Platform.Form.KeyUp += RegisterKeyUp;
+            Key = key;
+            IsPressed = isPressed;
+            WasPressed = wasPressed;
         }
 
-        private void UnhookForm()
+        public bool IsPressed { get; init; }
+
+        public bool WasPressed { get; init; }
+
+        public Keys Key { get; init; }
+    }
+
+    public struct MouseState
+    {
+        public int X;
+        public int Y;
+        public Click Left;
+        public Click Right;
+        public Click Center;
+        public Vector2 Location;
+
+        internal MouseState(int x, int y, Click l, Click r, Click c)
         {
-            game.Platform.Form.KeyDown -= RegisterKeyDown;
-            game.Platform.Form.KeyUp -= RegisterKeyUp;
+            X = x;
+            Y = y;
+            Left = l;
+            Right = r;
+            Center = c;
+            Location = new Vector2(x, y);
         }
 
-        private void RegisterKeyDown(object? sender, KeyEventArgs args) => asyncKeys[args.KeyCode] = true;
+        public bool IsInRect(Rectangle rect)
+            => X >= rect.Left && X <= rect.Right
+            && Y >= rect.Top && Y <= rect.Bottom;
+    }
 
-        private void RegisterKeyUp(object? sender, KeyEventArgs args) => asyncKeys[args.KeyCode] = false;
+    public struct Click
+    {
+        internal Click(bool clicked)
+        {
+            IsClicked = clicked;
+            WasClicked = false;
+        }
+
+        internal Click(bool clicked, bool wasClicked)
+        {
+            IsClicked = clicked;
+            WasClicked = wasClicked;
+        }
+
+        public bool IsClicked { get; init; }
+
+        public bool WasClicked { get; init; }
     }
 }
