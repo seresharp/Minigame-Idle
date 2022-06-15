@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MinigameIdle.Plinko;
 using MinigameIdle.Tetris;
 
 namespace MinigameIdle
@@ -16,6 +17,9 @@ namespace MinigameIdle
         public TetrisGame Tetris { get; init; }
         private Button TetrisButton = null!;
 
+        public PlinkoGame Plinko { get; init; }
+        private Button PlinkoButton = null!;
+
         public InputManager Input { get; init; } = new();
 
         public GraphicsDeviceManager Graphics { get; init; }
@@ -29,6 +33,8 @@ namespace MinigameIdle
             Graphics = new(this);
 
             Tetris = new TetrisGame(this);
+            Plinko = new PlinkoGame(this);
+
             ActiveGame = Tetris;
         }
 
@@ -42,6 +48,9 @@ namespace MinigameIdle
 
             Tetris.Initialize();
             TetrisButton = new(this, new(), Color.DimGray, "Falling Blocks");
+
+            Plinko.Initialize();
+            PlinkoButton = new(this, new(), Color.DimGray, "Falling Balls");
 
             SpriteBatch = new(GraphicsDevice);
             SpriteBatch.InitPixel();
@@ -57,10 +66,15 @@ namespace MinigameIdle
             Input.Update();
 
             Tetris.Update(gameTime);
+            Plinko.Update(gameTime);
 
             if (TetrisButton.WasClicked())
             {
                 ActiveGame = Tetris;
+            }
+            else if (PlinkoButton.WasClicked())
+            {
+                ActiveGame = Plinko;
             }
         }
 
@@ -69,8 +83,9 @@ namespace MinigameIdle
             GraphicsDevice.Clear(Color.DarkSlateGray);
             SpriteBatch.Begin();
 
-            // Tetris
+            // Games
             Tetris.Draw();
+            Plinko.Draw();
 
             // Sidebar
             SpriteBatch.DrawRectangle(new(0, 0, ScaleX(200), ScaleY(910)), new Color(56, 56, 56));
@@ -78,8 +93,7 @@ namespace MinigameIdle
             SpriteBatch.DrawText($"Points\n{Points.ToString(Points >= 1000000 ? "0.000E0" : "0.00")}", Font, Color.Black, new Vector2(0, 0), new Vector2(ScaleX(200), ScaleY(100)));
 
             TetrisButton.Draw();
-
-            //Graphics.DrawText((1/DeltaTime).ToString("00"), Button.DefaultFont, Color.Red, new(0, 800), new(200, 100));
+            PlinkoButton.Draw();
 
             SpriteBatch.End();
         }
@@ -96,6 +110,12 @@ namespace MinigameIdle
             TetrisButton.Resize(new(
                 ScaleX(0),
                 ScaleY(100),
+                ScaleX(200),
+                ScaleY(40)));
+
+            PlinkoButton.Resize(new(
+                ScaleX(0),
+                ScaleY(140),
                 ScaleX(200),
                 ScaleY(40)));
         }
