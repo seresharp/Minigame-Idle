@@ -6,16 +6,21 @@ namespace MinigameIdle.Plinko
     {
         public IdleGame MainGame { get; init; }
 
+        public PlinkoUpgrades BoughtUpgrades { get; init; } = new();
+
         private readonly Peg?[,] Pegs;
 
-        private List<Ball> Balls = new();
+        private readonly List<Ball> Balls = new();
 
         public PlinkoGame(IdleGame game)
         {
             MainGame = game;
-
-            // Create pegs
             Pegs = new Peg[15, 8];
+        }
+
+        public override void Initialize()
+        {
+            // Create pegs
             for (int x = 0; x < Pegs.GetLength(0); x++)
             {
                 for (int y = 0; y < Pegs.GetLength(1); y++)
@@ -62,6 +67,17 @@ namespace MinigameIdle.Plinko
                 }
             }
 
+            // Setup teleports
+            for (int x = 3; x < Pegs.GetLength(0); x += 4)
+            {
+                if (Pegs[x, Pegs.GetLength(1) - 1] is not Peg p)
+                {
+                    continue;
+                }
+
+                p.Top = Pegs[x + 1, 0];
+            }
+
             // Setup point rewards
             for (int x = 0; x < Pegs.GetLength(0); x++)
             {
@@ -74,16 +90,14 @@ namespace MinigameIdle.Plinko
             }
         }
 
-        public override void Initialize()
-        {
-            
-        }
-
+        private float _ballTimer;
         public override void Update(GameTime gameTime)
         {
-            if (Balls.Count == 0)
+            _ballTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            while (_ballTimer >= 5f)
             {
-                Balls.Add(new(Pegs[new Random().Next(Pegs.GetLength(0)), 0]));
+                _ballTimer -= 5f;
+                Balls.Add(new(this, Pegs[0, 0]));
             }
 
             for (int i = 0; i < Balls.Count; i++)
@@ -98,7 +112,7 @@ namespace MinigameIdle.Plinko
                     }
                     else
                     {
-                        Balls[i] = new(Balls[i].Next);
+                        Balls[i] = new(this, Balls[i].Next);
                     }
                 }
             }
@@ -111,6 +125,7 @@ namespace MinigameIdle.Plinko
                 return;
             }
 
+            // Background
             MainGame.SpriteBatch.DrawRectangle(new(
                 MainGame.ScaleX(225),
                 MainGame.ScaleY(25),
@@ -132,7 +147,56 @@ namespace MinigameIdle.Plinko
             MainGame.SpriteBatch.DrawRectangle(new(225, 416, 710, 9), Color.Black);
             for (int x = 0; x < Pegs.GetLength(0); x++)
             {
-                MainGame.SpriteBatch.DrawRectangle(new(226 + (50 * x), 370, 7, 50), Color.Black);
+                MainGame.SpriteBatch.DrawRectangle(new(
+                    MainGame.ScaleX(226 + (50 * x)),
+                    MainGame.ScaleY(370),
+                    MainGame.ScaleX(7),
+                    MainGame.ScaleY(50)),
+                    Color.Black);
+            }
+
+
+            // Point text and teleporter pads
+            for (int x = 0; x < Pegs.GetLength(0) - 1; x++)
+            {
+                if (x is 3 or 7 or 11)
+                {
+                    Color c = x switch
+                    {
+                        3 => Color.Purple,
+                        7 => Color.DarkOliveGreen,
+                        _ => Color.MediumVioletRed
+                    };
+
+                    MainGame.SpriteBatch.DrawRectangle(new(
+                        MainGame.ScaleX(235 + (50 * x)),
+                        MainGame.ScaleY(416),
+                        MainGame.ScaleX(39),
+                        MainGame.ScaleY(9)),
+                        c);
+
+                    MainGame.SpriteBatch.DrawRectangle(new(
+                        MainGame.ScaleX(260 + (50 * x)),
+                        MainGame.ScaleY(50),
+                        MainGame.ScaleX(39),
+                        MainGame.ScaleY(9)),
+                        c);
+
+                    continue;
+                }
+
+                int y = Pegs.GetLength(1) - 1;
+                if (Pegs[x, y] is not { Points: double p })
+                {
+                    continue;
+                }
+
+                MainGame.SpriteBatch.DrawText(
+                    p.ToString("0.0"),
+                    MainGame.Font,
+                    Color.DarkGreen,
+                    new(MainGame.ScaleX(235 + (50 * x)), MainGame.ScaleY(366)),
+                    new(MainGame.ScaleX(39), MainGame.ScaleY(50)));
             }
 
             // Balls
@@ -142,7 +206,6 @@ namespace MinigameIdle.Plinko
                 int nx = b.Next.X;
                 int cy = b.Current.Y;
                 int ny = b.Next.Y;
-                //float yfunc = (MathF.Log10(b.Progress) + 2) / 2;
                 float yfunc = MathF.Pow(2, 6 * (b.Progress - 1));
 
                 MainGame.SpriteBatch.DrawRectangle(new(
@@ -152,6 +215,12 @@ namespace MinigameIdle.Plinko
                     MainGame.ScaleY(7)),
                     Color.Red);
             }
+        }
+
+        public class PlinkoUpgrades
+        {
+            // Max 20
+            public int ImprovedRNG;
         }
 
         private class Peg
@@ -165,6 +234,8 @@ namespace MinigameIdle.Plinko
             public Peg? Left { get; set; }
 
             public Peg? Right { get; set; }
+
+            public Peg? Top { get; set; }
 
             public double Points { get; set; }
 
@@ -188,30 +259,42 @@ namespace MinigameIdle.Plinko
 
         private class Ball
         {
+            private readonly PlinkoGame Game;
+
             public Peg Current;
             public Peg Next;
             public float Progress;
 
-            public Ball(Peg current)
+            public Ball(PlinkoGame game, Peg current)
             {
+                Game = game;
+
+                // Check for ball teleports
                 Current = current;
-                if (current.Left == null && current.Right != null)
+                if (Current.Top != null)
                 {
-                    Next = current.Right;
+                    Current = Current.Top;
                 }
-                else if (current.Left != null && current.Right == null)
+
+                // Left/right logic
+                if (Current.Left == null && Current.Right != null)
                 {
-                    Next = current.Left;
+                    Next = Current.Right;
                 }
-                else if (current.Left != null && current.Right != null)
+                else if (Current.Left != null && Current.Right == null)
                 {
-                    Next = new Random().Next(2) == 0
-                        ? current.Left
-                        : current.Right;
+                    Next = Current.Left;
+                }
+                else if (Current.Left != null && Current.Right != null)
+                {
+                    Next = new Random().Next(2 + Game.BoughtUpgrades.ImprovedRNG) == 0
+                        ? Current.Left
+                        : Current.Right;
                 }
                 else
                 {
-                    Next = current;
+                    // Stay in place for a cycle after reaching the bottom
+                    Next = Current;
                 }
             }
         }
