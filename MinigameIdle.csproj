@@ -10,21 +10,19 @@
 
   <ItemGroup>
     <None Remove="Content\Arial.xnb" />
-    <None Remove="Content\bin\Arial.xnb" />
-    <None Remove="Content\bin\circle.xnb" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Content\bin\Arial.xnb">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Content\bin\circle.xnb">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.0.1641" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Content\bin\Arial.xnb">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="Content\bin\circle.xnb">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

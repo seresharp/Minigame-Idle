@@ -312,14 +312,14 @@ namespace MinigameIdle.Plinko
         public class PlinkoUpgrades
         {
             // Max 20
-            public int ImprovedRNG = 10;
+            public int ImprovedRNG;
 
-            public bool AutoSpawn = true;
+            public bool AutoSpawn;
 
             // Max 100
-            public int SpawnRate = 50;
+            public int SpawnRate;
 
-            public bool Teleports = true;
+            public bool Teleports;
 
             public float GetSpawnTime()
                 => 5f * MathF.Pow(.975f, SpawnRate);
