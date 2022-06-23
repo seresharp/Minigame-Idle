@@ -99,9 +99,9 @@ namespace MinigameIdle.Tetris
             UpgradeButtons.Resize();
         }
 
-        public override void Update(GameTime gameTime)
+        public override void DoInput(GameTime gameTime)
         {
-            // Button input
+            // Buttons
             if (StartGameButton.WasClicked())
             {
                 GameRunning = true;
@@ -121,6 +121,36 @@ namespace MinigameIdle.Tetris
             // Upgrades panel button handling
             UpgradeButtons.Update();
 
+            // Game input handling
+            if (GameRunning && !BoughtUpgrades.AIEnabled && CurrentTetromino is { Alive: true })
+            {
+                if (BoughtUpgrades.BasicControls && MainGame.Input.WasPressed(Keys.Left))
+                {
+                    CurrentTetromino.TryMove(new Point(-1, 0));
+                }
+
+                if (BoughtUpgrades.BasicControls && MainGame.Input.WasPressed(Keys.Right))
+                {
+                    CurrentTetromino.TryMove(new Point(1, 0));
+                }
+
+                if (BoughtUpgrades.BasicControls && MainGame.Input.WasPressed(Keys.Up))
+                {
+                    CurrentTetromino.Rotate();
+                }
+
+                if (BoughtUpgrades.Teleport && MainGame.Input.WasPressed(Keys.Down))
+                {
+                    while (CurrentTetromino.Alive)
+                    {
+                        CurrentTetromino.Tick();
+                    }
+                }
+            }
+        }
+
+        public override void Update(GameTime gameTime)
+        {
             // Autostart
             if (GameRunning)
             {
@@ -148,34 +178,6 @@ namespace MinigameIdle.Tetris
             EndGameButton.UpdateText($"End Early\n+{(GameRunning ? GetGridPoints().ToString("0.##") : 0)} Points");
 
             AIButton.UpdateText($"AI Enabled: {BoughtUpgrades.AIEnabled}{(BoughtUpgrades.AIUnlocked ? "" : "\n(Must be unlocked)")}");
-
-            // Game input handling
-            if (MainGame.ActiveGame == this && GameRunning
-                && !BoughtUpgrades.AIEnabled && CurrentTetromino is { Alive: true })
-            {
-                if (BoughtUpgrades.BasicControls && MainGame.Input.WasPressed(Keys.Left))
-                {
-                    CurrentTetromino.TryMove(new Point(-1, 0));
-                }
-
-                if (BoughtUpgrades.BasicControls && MainGame.Input.WasPressed(Keys.Right))
-                {
-                    CurrentTetromino.TryMove(new Point(1, 0));
-                }
-
-                if (BoughtUpgrades.BasicControls && MainGame.Input.WasPressed(Keys.Up))
-                {
-                    CurrentTetromino.Rotate();
-                }
-
-                if (BoughtUpgrades.Teleport && MainGame.Input.WasPressed(Keys.Down))
-                {
-                    while (CurrentTetromino.Alive)
-                    {
-                        CurrentTetromino.Tick();
-                    }
-                }
-            }
 
             // Move tetrominos
             _tickTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;

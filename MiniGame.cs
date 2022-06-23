@@ -8,6 +8,8 @@ namespace MinigameIdle
 
         public abstract void Update(GameTime gameTime);
 
+        public abstract void DoInput(GameTime gameTime);
+
         public abstract void Draw();
     }
 }

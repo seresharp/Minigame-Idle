@@ -12,10 +12,19 @@ namespace MinigameIdle.Plinko
 
         private readonly List<Ball> Balls = new();
 
+        private readonly Button SpawnButton;
+        private readonly Button AutoSpawnButton;
+        private readonly Button ImprovedRngButton;
+        private readonly Button TeleButton;
+
         public PlinkoGame(IdleGame game)
         {
             MainGame = game;
-            Pegs = new Peg[15, 8];
+            Pegs = new Peg[15, 14];
+            SpawnButton = new(MainGame, new(), Color.DimGray, "Spawn Ball");
+            AutoSpawnButton = new(MainGame, new(), Color.DimGray, "");
+            ImprovedRngButton = new(MainGame, new(), Color.DimGray, "");
+            TeleButton = new(MainGame, new(), Color.DimGray, "");
         }
 
         public override void Initialize()
@@ -67,16 +76,13 @@ namespace MinigameIdle.Plinko
                 }
             }
 
-            // Setup teleports
-            for (int x = 3; x < Pegs.GetLength(0); x += 4)
+            // Setup teleport
+            if (Pegs[6, Pegs.GetLength(1) - 1] is not Peg telePeg)
             {
-                if (Pegs[x, Pegs.GetLength(1) - 1] is not Peg p)
-                {
-                    continue;
-                }
-
-                p.Top = Pegs[x + 1, 0];
+                throw new InvalidDataException($"Peg at 6,{Pegs.GetLength(1) - 1} must be non-null");
             }
+
+            telePeg.Top = Pegs[7, 0];
 
             // Setup point rewards
             for (int x = 0; x < Pegs.GetLength(0); x++)
@@ -90,20 +96,92 @@ namespace MinigameIdle.Plinko
             }
         }
 
+        public void Resize()
+        {
+            SpawnButton.Resize(new(
+                MainGame.ScaleX(230),
+                MainGame.ScaleY(30),
+                MainGame.ScaleX(115),
+                MainGame.ScaleY(25)));
+
+            AutoSpawnButton.Resize(new(225, 805, 230, 80));
+            ImprovedRngButton.Resize(new(225 + 240, 805, 230, 80));
+            TeleButton.Resize(new(225 + 480, 805, 230, 80));
+        }
+
+        private float _manualBallTimer;
+        public override void DoInput(GameTime gameTime)
+        {
+            // Spawn button
+            _manualBallTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (SpawnButton.WasClicked() && _manualBallTimer >= 0.5f)
+            {
+                _manualBallTimer = 0f;
+                Balls.Add(new(this, Pegs[0, 0] ?? throw new InvalidDataException("Top left peg is null!")));
+            }
+
+            // Upgrades UI
+            if (AutoSpawnButton.WasClicked())
+            {
+                if (!BoughtUpgrades.AutoSpawn && MainGame.Points >= 100)
+                {
+                    MainGame.Points -= 100;
+                    BoughtUpgrades.AutoSpawn = true;
+                }
+                else if (BoughtUpgrades.AutoSpawn && BoughtUpgrades.SpawnRate < 100
+                    && MainGame.Points >= BoughtUpgrades.GetSpawnCost())
+                {
+                    MainGame.Points -= BoughtUpgrades.GetSpawnCost();
+                    BoughtUpgrades.SpawnRate++;
+                }
+            }
+
+            if (ImprovedRngButton.WasClicked() && BoughtUpgrades.ImprovedRNG < 20
+                && MainGame.Points >= BoughtUpgrades.GetRngCost())
+            {
+                MainGame.Points -= BoughtUpgrades.GetRngCost();
+                BoughtUpgrades.ImprovedRNG++;
+            }
+
+            if (TeleButton.WasClicked() && !BoughtUpgrades.Teleports
+                && MainGame.Points >= BoughtUpgrades.GetTeleCost())
+            {
+                MainGame.Points -= BoughtUpgrades.GetTeleCost();
+                BoughtUpgrades.Teleports = true;
+            }
+        }
+
         private float _ballTimer;
         public override void Update(GameTime gameTime)
         {
-            _ballTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            while (_ballTimer >= 5f)
+            // Button text TODO: Stop showing cost at max upgrades
+            if (!BoughtUpgrades.AutoSpawn)
             {
-                _ballTimer -= 5f;
-                Balls.Add(new(this, Pegs[0, 0]));
+                AutoSpawnButton.UpdateText("Unlock Auto Spawn\n100 Points");
+            }
+            else
+            {
+                AutoSpawnButton.UpdateText($"Spawn Time ({BoughtUpgrades.SpawnRate}/100)\n{BoughtUpgrades.GetSpawnCost()} Points");
+            }
+
+            ImprovedRngButton.UpdateText($"Improve RNG ({BoughtUpgrades.ImprovedRNG}/20)\n{BoughtUpgrades.GetRngCost()} Points");
+            TeleButton.UpdateText($"Teleporter\n{BoughtUpgrades.GetTeleCost()} Points");
+
+            // Auto spawn
+            if (BoughtUpgrades.AutoSpawn)
+            {
+                _ballTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                while (_ballTimer >= BoughtUpgrades.GetSpawnTime())
+                {
+                    _ballTimer -= BoughtUpgrades.GetSpawnTime();
+                    Balls.Add(new(this, Pegs[0, 0] ?? throw new InvalidDataException("Top left peg is null!")));
+                }
             }
 
             for (int i = 0; i < Balls.Count; i++)
             {
                 Balls[i].Progress += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (Balls[i].Progress >= 1f)
+                if (Balls[i].Progress >= 1)
                 {
                     if (Balls[i].Current == Balls[i].Next)
                     {
@@ -130,8 +208,18 @@ namespace MinigameIdle.Plinko
                 MainGame.ScaleX(225),
                 MainGame.ScaleY(25),
                 MainGame.ScaleX(710),
-                MainGame.ScaleY(400)),
+                MainGame.ScaleY(700)),
                 Color.LightBlue);
+
+            // UI
+            SpawnButton.Draw();
+            AutoSpawnButton.Draw();
+            ImprovedRngButton.Draw();
+
+            if (!BoughtUpgrades.Teleports)
+            {
+                TeleButton.Draw();
+            }
 
             // Pegs
             for (int x = 0; x < Pegs.GetLength(0); x++)
@@ -144,22 +232,26 @@ namespace MinigameIdle.Plinko
             }
 
             // Bottom slots
-            MainGame.SpriteBatch.DrawRectangle(new(225, 416, 710, 9), Color.Black);
+            MainGame.SpriteBatch.DrawRectangle(new(
+                MainGame.ScaleX(225),
+                MainGame.ScaleY(716),
+                MainGame.ScaleX(710),
+                MainGame.ScaleY(9)),
+                Color.Black);
             for (int x = 0; x < Pegs.GetLength(0); x++)
             {
                 MainGame.SpriteBatch.DrawRectangle(new(
                     MainGame.ScaleX(226 + (50 * x)),
-                    MainGame.ScaleY(370),
+                    MainGame.ScaleY(670),
                     MainGame.ScaleX(7),
                     MainGame.ScaleY(50)),
                     Color.Black);
             }
 
-
             // Point text and teleporter pads
             for (int x = 0; x < Pegs.GetLength(0) - 1; x++)
             {
-                if (x is 3 or 7 or 11)
+                if (x == 6 && BoughtUpgrades.Teleports)
                 {
                     Color c = x switch
                     {
@@ -170,7 +262,7 @@ namespace MinigameIdle.Plinko
 
                     MainGame.SpriteBatch.DrawRectangle(new(
                         MainGame.ScaleX(235 + (50 * x)),
-                        MainGame.ScaleY(416),
+                        MainGame.ScaleY(716),
                         MainGame.ScaleX(39),
                         MainGame.ScaleY(9)),
                         c);
@@ -195,7 +287,7 @@ namespace MinigameIdle.Plinko
                     p.ToString("0.0"),
                     MainGame.Font,
                     Color.DarkGreen,
-                    new(MainGame.ScaleX(235 + (50 * x)), MainGame.ScaleY(366)),
+                    new(MainGame.ScaleX(235 + (50 * x)), MainGame.ScaleY(666)),
                     new(MainGame.ScaleX(39), MainGame.ScaleY(50)));
             }
 
@@ -220,7 +312,26 @@ namespace MinigameIdle.Plinko
         public class PlinkoUpgrades
         {
             // Max 20
-            public int ImprovedRNG;
+            public int ImprovedRNG = 10;
+
+            public bool AutoSpawn = true;
+
+            // Max 100
+            public int SpawnRate = 50;
+
+            public bool Teleports = true;
+
+            public float GetSpawnTime()
+                => 5f * MathF.Pow(.975f, SpawnRate);
+
+            public float GetSpawnCost()
+                => MathF.Pow(SpawnRate + 1, 3) / 50;
+
+            public float GetRngCost()
+                => 2500 * (ImprovedRNG + 1);
+
+            public float GetTeleCost()
+                => Teleports ? 0 : 1000;
         }
 
         private class Peg
@@ -271,7 +382,7 @@ namespace MinigameIdle.Plinko
 
                 // Check for ball teleports
                 Current = current;
-                if (Current.Top != null)
+                if (Current.Top != null && Game.BoughtUpgrades.Teleports)
                 {
                     Current = Current.Top;
                 }

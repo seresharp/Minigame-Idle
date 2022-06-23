@@ -64,6 +64,7 @@ namespace MinigameIdle
         protected override void Update(GameTime gameTime)
         {
             Input.Update();
+            ActiveGame?.DoInput(gameTime);
 
             Tetris.Update(gameTime);
             Plinko.Update(gameTime);
@@ -113,6 +114,7 @@ namespace MinigameIdle
                 ScaleX(200),
                 ScaleY(40)));
 
+            Plinko.Resize();
             PlinkoButton.Resize(new(
                 ScaleX(0),
                 ScaleY(140),
