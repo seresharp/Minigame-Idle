@@ -104,9 +104,23 @@ namespace MinigameIdle.Plinko
                 MainGame.ScaleX(115),
                 MainGame.ScaleY(25)));
 
-            AutoSpawnButton.Resize(new(225, 805, 230, 80));
-            ImprovedRngButton.Resize(new(225 + 240, 805, 230, 80));
-            TeleButton.Resize(new(225 + 480, 805, 230, 80));
+            AutoSpawnButton.Resize(new(
+                MainGame.ScaleX(225),
+                MainGame.ScaleY(805),
+                MainGame.ScaleX(230),
+                MainGame.ScaleY(80)));
+
+            ImprovedRngButton.Resize(new(
+                MainGame.ScaleX(465),
+                MainGame.ScaleY(805),
+                MainGame.ScaleX(230),
+                MainGame.ScaleY(80)));
+
+            TeleButton.Resize(new(
+                MainGame.ScaleX(705),
+                MainGame.ScaleY(805),
+                MainGame.ScaleX(230),
+                MainGame.ScaleY(80)));
         }
 
         private float _manualBallTimer;
@@ -325,7 +339,7 @@ namespace MinigameIdle.Plinko
                 => 5f * MathF.Pow(.975f, SpawnRate);
 
             public float GetSpawnCost()
-                => MathF.Pow(SpawnRate + 1, 3) / 50;
+                => 100 + (MathF.Pow(SpawnRate + 1, 3) / 50);
 
             public float GetRngCost()
                 => 2500 * (ImprovedRNG + 1);

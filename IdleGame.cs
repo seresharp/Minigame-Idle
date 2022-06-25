@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MinigameIdle.Plinko;
+using MinigameIdle.Shooter;
 using MinigameIdle.Tetris;
 
 namespace MinigameIdle
@@ -20,6 +21,9 @@ namespace MinigameIdle
         public PlinkoGame Plinko { get; init; }
         private Button PlinkoButton = null!;
 
+        public ShooterGame Shooter { get; init; }
+        private Button ShooterButton = null!;
+
         public InputManager Input { get; init; } = new();
 
         public GraphicsDeviceManager Graphics { get; init; }
@@ -34,6 +38,7 @@ namespace MinigameIdle
 
             Tetris = new TetrisGame(this);
             Plinko = new PlinkoGame(this);
+            Shooter = new ShooterGame(this);
 
             ActiveGame = Tetris;
         }
@@ -52,6 +57,9 @@ namespace MinigameIdle
             Plinko.Initialize();
             PlinkoButton = new(this, new(), Color.DimGray, "Falling Balls");
 
+            Shooter.Initialize();
+            ShooterButton = new(this, new(), Color.DimGray, "Shooter");
+
             SpriteBatch = new(GraphicsDevice);
             SpriteBatch.InitPixel();
 
@@ -68,6 +76,7 @@ namespace MinigameIdle
 
             Tetris.Update(gameTime);
             Plinko.Update(gameTime);
+            Shooter.Update(gameTime);
 
             if (TetrisButton.WasClicked())
             {
@@ -76,6 +85,10 @@ namespace MinigameIdle
             else if (PlinkoButton.WasClicked())
             {
                 ActiveGame = Plinko;
+            }
+            else if (ShooterButton.WasClicked())
+            {
+                ActiveGame = Shooter;
             }
         }
 
@@ -87,6 +100,7 @@ namespace MinigameIdle
             // Games
             Tetris.Draw();
             Plinko.Draw();
+            Shooter.Draw();
 
             // Sidebar
             SpriteBatch.DrawRectangle(new(0, 0, ScaleX(200), ScaleY(910)), new Color(56, 56, 56));
@@ -95,6 +109,7 @@ namespace MinigameIdle
 
             TetrisButton.Draw();
             PlinkoButton.Draw();
+            ShooterButton.Draw();
 
             SpriteBatch.End();
         }
@@ -118,6 +133,12 @@ namespace MinigameIdle
             PlinkoButton.Resize(new(
                 ScaleX(0),
                 ScaleY(140),
+                ScaleX(200),
+                ScaleY(40)));
+
+            ShooterButton.Resize(new(
+                ScaleX(0),
+                ScaleY(220),
                 ScaleX(200),
                 ScaleY(40)));
         }
